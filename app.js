@@ -87,18 +87,35 @@
           const gradeTd = document.createElement('td');
           gradeTd.className='grade';
           const input = document.createElement('input');
-          input.type = 'number';
+          input.type = (s.code==='CSBGRAD') ? 'text' : 'number';
           input.className = 'grade';
-          input.step = '0.25';
-          input.min = '1';
-          input.max = '4';
-          if(typeof state.grades[s.code] === 'number') input.value = String(state.grades[s.code]);
-          input.addEventListener('input', () => {
-            const v = parseFloat(input.value);
-            if(Number.isFinite(v) && v >= 1 && v <= 4){ state.grades[s.code] = v; }
-            else { delete state.grades[s.code]; }
-            updateAverages();
-          });
+          if(s.code==='CSBGRAD'){
+            input.placeholder = 'P or R';
+            const val = state.grades[s.code];
+            if(val===4 || val===5) input.value = (val===4?'P':'R');
+            input.addEventListener('input', () => {
+              const raw = input.value.trim().toUpperCase();
+              if(raw==='P'){ state.grades[s.code]=4; input.classList.remove('invalid'); }
+              else if(raw==='R'){ state.grades[s.code]=5; input.classList.remove('invalid'); }
+              else if(raw===''){ delete state.grades[s.code]; input.classList.remove('invalid'); }
+              else { input.classList.add('invalid'); return; }
+              updateAverages();
+              updateInvalidBadge();
+            });
+          } else {
+            input.step = '0.25';
+            input.min = '1';
+            input.max = '4';
+            if(typeof state.grades[s.code] === 'number') input.value = String(state.grades[s.code]);
+            input.addEventListener('input', () => {
+              const v = parseFloat(input.value);
+              if(Number.isFinite(v) && v >= 1 && v <= 4){ state.grades[s.code] = v; input.classList.remove('invalid'); }
+              else if(input.value===''){ delete state.grades[s.code]; input.classList.remove('invalid'); }
+              else { input.classList.add('invalid'); }
+              updateAverages();
+              updateInvalidBadge();
+            });
+          }
           gradeTd.appendChild(input);
           tr.append(codeTd, unitsTd, gradeTd);
           tbody.appendChild(tr);
@@ -121,6 +138,7 @@
     });
 
     updateAverages();
+    updateInvalidBadge();
   }
 
   function updateAverages(){
@@ -160,6 +178,21 @@
     if(g>=3.4) return 'Cum Laude';
     if(g>=3.0) return 'Honorable Mention';
     return 'No Honors';
+  }
+
+  function updateInvalidBadge(){
+    const inputs = document.querySelectorAll('input.grade');
+    let invalidCount = 0;
+    inputs.forEach(inp => { if(inp.classList.contains('invalid')) invalidCount++; });
+    const badge = document.getElementById('errorBadge');
+    if(!badge) return;
+    if(invalidCount>0){
+      badge.classList.remove('hidden');
+      badge.textContent = String(invalidCount);
+      badge.title = `${invalidCount} invalid grade${invalidCount>1?'s':''}`;
+    } else {
+      badge.classList.add('hidden');
+    }
   }
 
   // header controls
