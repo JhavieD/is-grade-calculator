@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>IS Grade Calculator</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="print.css" media="print" />
+  </head>
+  <body>
+    <header class="app-header">
+      <h1>Benilde IS Grade Calculator</h1>
+      <div class="controls">
+        <label for="trackSelect">Track</label>
+        <select id="trackSelect" aria-label="Select Track">
+          <option value="xp">Extreme Programming</option>
+          <option value="infosec">Information Security</option>
+          <option value="datamgmt">Data Management</option>
+        </select>
+        <button id="saveBtn" type="button">Save</button>
+        <button id="resetBtn" type="button">Reset All</button>
+        <button id="csvBtn" type="button">Export CSV</button>
+        <button id="printBtn" type="button">Export PDF</button>
+      </div>
+    </header>
+
+    <main id="app" class="app"></main>
+
+    <footer class="app-footer">
+      <div id="overall" class="overall"></div>
+    </footer>
+
+    <script src="app.js"></script>
+  </body>
+  </html>
+
+

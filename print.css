@@ -1,0 +1,7 @@
+@media print{
+  .app-header,.app-footer,button,select{display:none !important}
+  .year{page-break-inside:avoid}
+  .term{page-break-inside:avoid}
+}
+
+
