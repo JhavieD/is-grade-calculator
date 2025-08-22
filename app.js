@@ -13,11 +13,11 @@
     // 2nd year
     S(2,1,'APPDAET',3),S(2,1,'ARTAPRI',3),S(2,1,'BUSEVAL',3),S(2,1,'PEFORTS',2),S(2,1,'READHIS',3),S(2,1,'SYSANDE',3),S(2,1,'WEBDEVT',3),
     S(2,2,'APPINTR',3),S(2,2,'CONWORLD',3),S(2,2,'IENTARC',3),S(2,2,'INFOMGT',3),S(2,2,'JORIZAL',3),S(2,2,'UIUXDES',3),
-    Slot(2,3,'Y2T3',3), S(2,3,'INFODBM',3), S(2,3,'ISPRMGT',3), S(2,3,'MOBDEVT',3), S(2,3,'REEXECO',3),
+    S(2,3,'INFODBM',3), S(2,3,'ISPRMGT',3), S(2,3,'MOBDEVT',3), S(2,3,'REEXECO',3),
     // 3rd year
-    Slot(3,1,'Y3T1',3), S(3,1,'PROCOMM',3), S(3,1,'ISQUANT',3), S(3,1,'ISSRCH',3), S(3,1,'ISSTRAMA',3),
-    Slot(3,2,'Y3T2',3), S(3,2,'GLOBCOM',3), S(3,2,'IETHICS',3), S(3,2,'ISPROJ1',3), S(3,2,'SOFTEST',3),
-    S(3,3,'CSBGRAD',1), S(3,3,'MARFRET',3), Slot(3,3,'Y3T3',3), S(3,3,'ISPROJ2',3),
+    S(3,1,'PROCOMM',3), S(3,1,'ISQUANT',3), S(3,1,'ISSRCH',3), S(3,1,'ISSTRAMA',3),
+    S(3,2,'GLOBCOM',3), S(3,2,'IETHICS',3), S(3,2,'ISPROJ1',3), S(3,2,'SOFTEST',3),
+    S(3,3,'CSBGRAD',1), S(3,3,'MARFRET',3), S(3,3,'ISPROJ2',3),
     // 4th year
     S(4,1,'ISPRACT',6)
   ];
@@ -206,24 +206,187 @@
 
     document.getElementById('saveBtn').addEventListener('click', () => saveState(state));
     document.getElementById('resetBtn').addEventListener('click', () => { localStorage.removeItem(STORAGE_KEY); state.grades={}; state.selectedTrack='xp'; document.getElementById('trackSelect').value='xp'; render(); });
-    document.getElementById('csvBtn').addEventListener('click', () => exportCSV());
-    document.getElementById('printBtn').addEventListener('click', () => window.print());
+    document.getElementById('excelBtn').addEventListener('click', () => exportExcel());
 
     render();
   });
 
   function exportCSV(){
     const subjects = getActiveSubjects(state.selectedTrack);
-    const rows = [['Year','Term','Subject','Units','Grade','Track']];
-    for(const s of subjects){
-      rows.push([s.year,s.term,s.code,s.units,(state.grades[s.code] ?? ''), state.selectedTrack]);
+    
+    // Create a well-structured CSV with proper spacing and organization
+    const rows = [];
+    
+    // Header section with metadata
+    rows.push(['BENILDE IS GRADE CALCULATOR']);
+    rows.push(['']);
+    rows.push(['Track:', state.selectedTrack.toUpperCase()]);
+    rows.push(['Export Date:', new Date().toLocaleDateString()]);
+    rows.push(['']);
+    rows.push(['']); // Extra blank row for better separation
+    
+    // Column headers with proper spacing
+    rows.push(['ACADEMIC YEAR', 'TERM', 'SUBJECT CODE', 'UNITS', 'GRADE', 'HONORS STATUS', 'TERM GPA']);
+    rows.push(['']); // Extra blank row after headers
+    
+    // Group by year and term for GPA calculations
+    const byYearTerm = {};
+    subjects.forEach(s => {
+      const key = `${s.year}-${s.term}`;
+      if (!byYearTerm[key]) byYearTerm[key] = [];
+      byYearTerm[key].push(s);
+    });
+    
+    // Data rows, grouped by term with sub-headers and spacing
+    for (const yearTermKey of Object.keys(byYearTerm).sort()) {
+      const termSubjects = byYearTerm[yearTermKey];
+      const [year, term] = yearTermKey.split('-');
+      const termGPA = computeWeightedAverage(termSubjects, state.grades);
+
+      // Add a sub-header for each term
+      rows.push([`YEAR ${year} - ${ordinal(term)} TERM`]);
+      
+      for (const s of termSubjects) {
+        const grade = state.grades[s.code];
+        let gradeDisplay = '';
+        let honorsStatus = '';
+
+        if (s.code === 'CSBGRAD') {
+          if (grade === 4) { gradeDisplay = 'P'; honorsStatus = 'PASS'; }
+          else if (grade === 5) { gradeDisplay = 'R'; honorsStatus = 'FAIL'; }
+        } else {
+          if (typeof grade === 'number') {
+            gradeDisplay = grade.toFixed(2);
+            honorsStatus = honorFromGPA(grade); // Individual subject honors
+          }
+        }
+
+        rows.push([
+          year, // Academic Year
+          ordinal(term), // Term
+          s.code,
+          s.units,
+          gradeDisplay,
+          honorsStatus,
+          termGPA === null ? '' : termGPA.toFixed(2) // Term GPA repeated for each subject in term
+        ]);
+      }
+      rows.push(['']); // Blank row after each term's subjects
     }
-    const csv = rows.map(r=>r.join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+
+    // Summary section
+    const overall = computeWeightedAverage(subjects, state.grades);
+    rows.push(['SUMMARY']);
+    rows.push(['']);
+    rows.push(['Total Subjects:', subjects.length]);
+    rows.push(['Track:', state.selectedTrack.toUpperCase()]);
+    rows.push(['Overall GPA:', overall === null ? '' : overall.toFixed(2)]);
+    rows.push(['Honors Level:', overall === null ? '' : honorFromGPA(overall)]);
+    
+    const csvContent = rows.map(e => e.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = 'grades.csv'; a.click();
-    URL.revokeObjectURL(url);
+    link.setAttribute('href', url);
+    const date = new Date().toISOString().split('T')[0];
+    link.setAttribute('download', `benilde-grades-${state.selectedTrack}-${date}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  function exportExcel(){
+    const subjects = getActiveSubjects(state.selectedTrack);
+    
+    // Create workbook and worksheet
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet([]);
+    
+    // Header section with metadata
+    XLSX.utils.sheet_add_aoa(ws, [
+      ['BENILDE IS GRADE CALCULATOR'],
+      [''],
+      ['Track:', state.selectedTrack.toUpperCase()],
+      ['Export Date:', new Date().toLocaleDateString()],
+      [''],
+      [''],
+      ['ACADEMIC YEAR', 'TERM', 'SUBJECT CODE', 'UNITS', 'GRADE', 'HONORS STATUS', 'TERM GPA']
+    ], { origin: 'A1' });
+    
+    // Group by year and term
+    const byYearTerm = {};
+    subjects.forEach(s => {
+      const key = `${s.year}-${s.term}`;
+      if (!byYearTerm[key]) byYearTerm[key] = [];
+      byYearTerm[key].push(s);
+    });
+    
+    let currentRow = 9; // Start after headers
+    
+    // Data rows with proper grouping
+    for (const yearTermKey of Object.keys(byYearTerm).sort()) {
+      const termSubjects = byYearTerm[yearTermKey];
+      const [year, term] = yearTermKey.split('-');
+      const termGPA = computeWeightedAverage(termSubjects, state.grades);
+
+      // Add term header
+      XLSX.utils.sheet_add_aoa(ws, [[`YEAR ${year} - ${ordinal(term)} TERM`]], { origin: `A${currentRow}` });
+      currentRow++;
+      
+      // Add subjects for this term
+      for (const s of termSubjects) {
+        const grade = state.grades[s.code];
+        let gradeDisplay = '';
+        let honorsStatus = '';
+
+        if (s.code === 'CSBGRAD') {
+          if (grade === 4) { gradeDisplay = 'P'; honorsStatus = 'PASS'; }
+          else if (grade === 5) { gradeDisplay = 'R'; honorsStatus = 'FAIL'; }
+        } else {
+          if (typeof grade === 'number') {
+            gradeDisplay = grade.toFixed(2);
+            honorsStatus = honorFromGPA(grade);
+          }
+        }
+
+        XLSX.utils.sheet_add_aoa(ws, [[
+          year, ordinal(term), s.code, s.units, gradeDisplay, honorsStatus, 
+          termGPA === null ? '' : termGPA.toFixed(2)
+        ]], { origin: `A${currentRow}` });
+        currentRow++;
+      }
+      currentRow++; // Blank row after term
+    }
+    
+    // Summary section
+    const overall = computeWeightedAverage(subjects, state.grades);
+    XLSX.utils.sheet_add_aoa(ws, [
+      ['SUMMARY'],
+      [''],
+      ['Total Subjects:', subjects.length],
+      ['Track:', state.selectedTrack.toUpperCase()],
+      ['Overall GPA:', overall === null ? '' : overall.toFixed(2)],
+      ['Honors Level:', overall === null ? '' : honorFromGPA(overall)]
+    ], { origin: `A${currentRow}` });
+    
+    // Apply styling and formatting
+    ws['!cols'] = [
+      { width: 15 }, // Academic Year
+      { width: 12 }, // Term
+      { width: 15 }, // Subject Code
+      { width: 8 },  // Units
+      { width: 10 }, // Grade
+      { width: 20 }, // Honors Status
+      { width: 12 }  // Term GPA
+    ];
+    
+    // Add the worksheet to workbook
+    XLSX.utils.book_append_sheet(wb, ws, 'Grades');
+    
+    // Export the file
+    const date = new Date().toISOString().split('T')[0];
+    XLSX.writeFile(wb, `benilde-grades-${state.selectedTrack}-${date}.xlsx`);
   }
 })();
 
