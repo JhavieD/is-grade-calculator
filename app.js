@@ -13,11 +13,11 @@
     // 2nd year
     S(2,1,'APPDAET',3),S(2,1,'ARTAPRI',3),S(2,1,'BUSEVAL',3),S(2,1,'PEFORTS',2),S(2,1,'READHIS',3),S(2,1,'SYSANDE',3),S(2,1,'WEBDEVT',3),
     S(2,2,'APPINTR',3),S(2,2,'CONWORLD',3),S(2,2,'IENTARC',3),S(2,2,'INFOMGT',3),S(2,2,'JORIZAL',3),S(2,2,'UIUXDES',3),
-    S(2,3,'INFODBM',3), S(2,3,'ISPRMGT',3), S(2,3,'MOBDEVT',3), S(2,3,'REEXECO',3),
+    Slot(2,3,'Y2T3',3), S(2,3,'INFODBM',3), S(2,3,'ISPRMGT',3), S(2,3,'MOBDEVT',3), S(2,3,'REEXECO',3),
     // 3rd year
-    S(3,1,'PROCOMM',3), S(3,1,'ISQUANT',3), S(3,1,'ISSRCH',3), S(3,1,'ISSTRAMA',3),
-    S(3,2,'GLOBCOM',3), S(3,2,'IETHICS',3), S(3,2,'ISPROJ1',3), S(3,2,'SOFTEST',3),
-    S(3,3,'CSBGRAD',1), S(3,3,'MARFRET',3), S(3,3,'ISPROJ2',3),
+    Slot(3,1,'Y3T1',3), S(3,1,'PROCOMM',3), S(3,1,'ISQUANT',3), S(3,1,'ISSRCH',3), S(3,1,'ISSTRAMA',3),
+    Slot(3,2,'Y3T2',3), S(3,2,'GLOBCOM',3), S(3,2,'IETHICS',3), S(3,2,'ISPROJ1',3), S(3,2,'SOFTEST',3),
+    S(3,3,'CSBGRAD',1), S(3,3,'MARFRET',3), Slot(3,3,'Y3T3',3), S(3,3,'ISPROJ2',3),
     // 4th year
     S(4,1,'ISPRACT',6)
   ];
@@ -276,8 +276,8 @@
 
     // Summary section
     const overall = computeWeightedAverage(subjects, state.grades);
-    rows.push(['SUMMARY']);
     rows.push(['']);
+    rows.push(['SUMMARY']);
     rows.push(['Total Subjects:', subjects.length]);
     rows.push(['Track:', state.selectedTrack.toUpperCase()]);
     rows.push(['Overall GPA:', overall === null ? '' : overall.toFixed(2)]);
