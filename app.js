@@ -268,7 +268,7 @@
           s.units,
           gradeDisplay,
           honorsStatus,
-          termGPA === null ? '' : termGPA.toFixed(2) // Term GPA repeated for each subject in term
+          (termGPA ? termGPA.toFixed(2) : '')
         ]);
       }
       rows.push(['']); // Blank row after each term's subjects

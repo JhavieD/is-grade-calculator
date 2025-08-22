@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Term Averages - Benilde IS Grade Calculator</title>
+    <link rel="stylesheet" href="styles.css" />
+    <style>
+      .term-inputs {
+        max-width: 800px;
+        margin: 20px auto;
+        padding: 20px;
+        background: var(--neutral-0);
+        border-radius: 12px;
+        border: 1px solid var(--neutral-200);
+      }
+      .term-row {
+        display: flex;
+        align-items: center;
+        padding: 12px;
+        border-bottom: 1px solid var(--neutral-200);
+        gap: 20px;
+      }
+      .term-row:last-child {
+        border-bottom: none;
+      }
+      .term-label {
+        font-weight: 700;
+        min-width: 120px;
+        color: var(--primary);
+      }
+      .term-input {
+        width: 100px;
+        height: 32px;
+        padding: 0 8px;
+        border: 1px solid var(--neutral-200);
+        border-radius: 6px;
+        text-align: center;
+        font-size: 14px;
+      }
+      .term-input:focus {
+        outline: 2px solid var(--primary);
+        border-color: var(--primary);
+      }
+      .nav-buttons {
+        text-align: center;
+        margin: 20px 0;
+      }
+      .nav-buttons a {
+        display: inline-block;
+        padding: 10px 20px;
+        background: var(--primary);
+        color: white;
+        text-decoration: none;
+        border-radius: 6px;
+        margin: 0 10px;
+      }
+      .nav-buttons a:hover {
+        filter: brightness(0.95);
+      }
+    </style>
+  </head>
+  <body>
+    <header class="app-header">
+      <h1>Term Averages Input</h1>
+      <div class="controls">
+        <button id="saveBtn" type="button">Save Averages</button>
+        <button id="resetBtn" type="button">Reset All</button>
+        <button id="exportBtn" type="button">Export CSV</button>
+      </div>
+    </header>
+
+    <div class="nav-buttons">
+      <a href="index.html">← Back to Grade Calculator</a>
+    </div>
+
+    <div class="term-inputs">
+      <h2>Enter Term Averages (1.0 - 4.0)</h2>
+      <p>Use this page to input term averages for DL certificates or when you don't have individual subject grades.</p>
+      
+      <div id="termInputs"></div>
+      
+      <div class="overall" id="overall"></div>
+    </div>
+
+    <script>
+      const STORAGE_KEY = 'is-term-averages';
+      
+      function loadTermAverages() {
+        try {
+          return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+        } catch {
+          return {};
+        }
+      }
+      
+      function saveTermAverages(averages) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(averages));
+      }
+      
+      function renderTermInputs() {
+        const container = document.getElementById('termInputs');
+        container.innerHTML = '';
+        
+        const averages = loadTermAverages();
+        
+        for (let year = 1; year <= 4; year++) {
+          for (let term = 1; term <= 3; term++) {
+            if (year === 4 && term > 1) continue; // 4th year only has 1 term
+            
+            const termRow = document.createElement('div');
+            termRow.className = 'term-row';
+            
+            const label = document.createElement('div');
+            label.className = 'term-label';
+            label.textContent = `Year ${year} - ${ordinal(term)} Term`;
+            
+            const input = document.createElement('input');
+            input.type = 'number';
+            input.className = 'term-input';
+            input.step = '0.01';
+            input.min = '1';
+            input.max = '4';
+            input.placeholder = '1.00';
+            
+            const key = `${year}-${term}`;
+            if (averages[key]) {
+              input.value = averages[key];
+            }
+            
+            input.addEventListener('input', () => {
+              const value = parseFloat(input.value);
+              console.log(`Input changed for ${key}: ${input.value} -> ${value}`); // Debug
+              
+              if (Number.isFinite(value) && value >= 1 && value <= 4) {
+                averages[key] = value;
+                console.log(`Saved ${key}: ${value}`); // Debug
+              } else if (input.value === '') {
+                delete averages[key];
+                console.log(`Deleted ${key}`); // Debug
+              }
+              
+              // Save to localStorage immediately
+              saveTermAverages(averages);
+              
+              // Update the display
+              updateOverall();
+            });
+            
+            termRow.appendChild(label);
+            termRow.appendChild(input);
+            container.appendChild(termRow);
+          }
+        }
+        
+        updateOverall();
+      }
+      
+      function updateOverall() {
+        const averages = loadTermAverages();
+        const overallDiv = document.getElementById('overall');
+        
+        let totalWeighted = 0;
+        let totalUnits = 0;
+        
+        // Define units per term (you can adjust these)
+        const unitsPerTerm = {
+          '1-1': 23, '1-2': 23, '1-3': 23,
+          '2-1': 20, '2-2': 18, '2-3': 15,
+          '3-1': 15, '3-2': 15, '3-3': 10,
+          '4-1': 6
+        };
+        
+        console.log('Current averages:', averages); // Debug
+        
+        for (const [key, value] of Object.entries(averages)) {
+          if (unitsPerTerm[key]) {
+            totalWeighted += value * unitsPerTerm[key];
+            totalUnits += unitsPerTerm[key];
+            console.log(`Term ${key}: ${value} × ${unitsPerTerm[key]} = ${value * unitsPerTerm[key]}`); // Debug
+          }
+        }
+        
+        console.log(`Total weighted: ${totalWeighted}, Total units: ${totalUnits}`); // Debug
+        
+        if (totalUnits > 0) {
+          const overall = Math.round((totalWeighted / totalUnits) * 100) / 100;
+          const honor = getHonorLevel(overall);
+          overallDiv.innerHTML = `Overall Average: ${overall.toFixed(2)} — ${honor}`;
+        } else {
+          overallDiv.innerHTML = 'Overall Average: — (No term averages entered)';
+        }
+      }
+      
+      function getHonorLevel(gpa) {
+        if (gpa >= 3.8) return 'Summa Cum Laude';
+        if (gpa >= 3.6) return 'Magna Cum Laude';
+        if (gpa >= 3.4) return 'Cum Laude';
+        if (gpa >= 3.0) return 'Honorable Mention';
+        return 'No Honors';
+      }
+      
+      function ordinal(n) {
+        return ['', '1ST', '2ND', '3RD', '4TH', '5TH'][n] || `${n}TH`;
+      }
+      
+      function exportCSV() {
+        const averages = loadTermAverages();
+        const rows = [
+          ['BENILDE IS TERM AVERAGES'],
+          [''],
+          ['Export Date:', new Date().toLocaleDateString()],
+          [''],
+          ['YEAR', 'TERM', 'TERM AVERAGE', 'UNITS'],
+          ['']
+        ];
+        
+        const unitsPerTerm = {
+          '1-1': 23, '1-2': 23, '1-3': 23,
+          '2-1': 20, '2-2': 18, '2-3': 15,
+          '3-1': 15, '3-2': 15, '3-3': 10,
+          '4-1': 6
+        };
+        
+        for (let year = 1; year <= 4; year++) {
+          for (let term = 1; term <= 3; term++) {
+            if (year === 4 && term > 1) continue;
+            
+            const key = `${year}-${term}`;
+            const average = averages[key] || '';
+            const units = unitsPerTerm[key] || 0;
+            
+            rows.push([
+              year,
+              ordinal(term),
+              average,
+              units
+            ]);
+          }
+        }
+        
+        const csv = rows.map(row => 
+          row.map(cell => `"${cell}"`).join(',')
+        ).join('\n');
+        
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `term-averages-${new Date().toISOString().split('T')[0]}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+      
+      // Event listeners
+      document.getElementById('saveBtn').addEventListener('click', () => {
+        const averages = loadTermAverages();
+        saveTermAverages(averages);
+        alert('Term averages saved!');
+      });
+      
+      document.getElementById('resetBtn').addEventListener('click', () => {
+        if (confirm('Are you sure you want to reset all term averages?')) {
+          localStorage.removeItem(STORAGE_KEY);
+          renderTermInputs();
+        }
+      });
+      
+      document.getElementById('exportBtn').addEventListener('click', exportCSV);
+      
+      // Initialize
+      renderTermInputs();
+    </script>
+  </body>
+</html>
